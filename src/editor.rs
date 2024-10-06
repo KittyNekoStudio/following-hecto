@@ -1,5 +1,18 @@
-use crossterm::event::{read, Event, Event::Key, KeyCode::Char, KeyEvent, KeyModifiers};
-use terminal::Terminal;
+use std::io::{stdout, Write};
+
+use crossterm::{
+    cursor::{Hide, Show},
+    event::{
+        read,
+        Event::{self, Key},
+        KeyCode::Char,
+        KeyEvent, KeyModifiers,
+    },
+    queue,
+    style::Print,
+};
+
+use terminal::{MoveTerminal, Terminal};
 mod terminal;
 
 pub struct Editor {
@@ -19,6 +32,7 @@ impl Editor {
     fn repl(&mut self) -> Result<(), std::io::Error> {
         loop {
             self.refresh_screen()?;
+            stdout().flush()?;
             if self.should_quit {
                 break;
             }
@@ -41,21 +55,22 @@ impl Editor {
         }
     }
     fn refresh_screen(&self) -> Result<(), std::io::Error> {
+        queue!(stdout(), Hide)?;
         if self.should_quit {
             Terminal::clear_screen()?;
-            print!("Goodbye.\r\n");
+            queue!(stdout(), Print("Goodbye\r\n"))?;
         } else {
             Self::draw_rows()?;
-            Terminal::move_cursor_to(0, 0)?;
+            Terminal::move_cursor_to(MoveTerminal::new())?;
         }
         Ok(())
     }
     fn draw_rows() -> Result<(), std::io::Error> {
-        let height = Terminal::size()?.1;
-        for current_row in 0..height {
-            print!("~");
-            if current_row + 1 < height {
-                print!("\r\n");
+        let height = Terminal::size();
+        for current_row in 0..height.height {
+            queue!(stdout(), Print("~"))?;
+            if current_row + 1 < height.height {
+                queue!(stdout(), Print("\r\n"))?;
             }
         }
         Ok(())
