@@ -1,18 +1,13 @@
-use std::io::{stdout, Write};
+use std::io::Error;
 
-use crossterm::{
-    cursor::{Hide, Show},
-    event::{
-        read,
-        Event::{self, Key},
-        KeyCode::Char,
-        KeyEvent, KeyModifiers,
-    },
-    queue,
-    style::Print,
+use crossterm::event::{
+    read,
+    Event::{self, Key},
+    KeyCode::Char,
+    KeyEvent, KeyModifiers,
 };
 
-use terminal::{MoveTerminal, Terminal};
+use terminal::{Position, Size, Terminal};
 mod terminal;
 
 pub struct Editor {
@@ -29,10 +24,9 @@ impl Editor {
         Terminal::terminate().unwrap();
         result.unwrap();
     }
-    fn repl(&mut self) -> Result<(), std::io::Error> {
+    fn repl(&mut self) -> Result<(), Error> {
         loop {
             self.refresh_screen()?;
-            stdout().flush()?;
             if self.should_quit {
                 break;
             }
@@ -54,25 +48,48 @@ impl Editor {
             }
         }
     }
-    fn refresh_screen(&self) -> Result<(), std::io::Error> {
-        queue!(stdout(), Hide)?;
+    fn refresh_screen(&self) -> Result<(), Error> {
+        Terminal::hide_cursor()?;
         if self.should_quit {
             Terminal::clear_screen()?;
-            queue!(stdout(), Print("Goodbye\r\n"))?;
+            Terminal::print("Goodbye\r\n")?;
         } else {
             Self::draw_rows()?;
-            Terminal::move_cursor_to(MoveTerminal::new())?;
+            Self::print_name()?;
+            Terminal::move_cursor_to(Position { x: 0, y: 0 })?;
+        }
+
+        Terminal::show_cursor()?;
+        Terminal::execute()?;
+        Ok(())
+    }
+    fn draw_rows() -> Result<(), Error> {
+        let Size { height, .. } = Terminal::size()?;
+        for current_row in 0..height {
+            Terminal::clear_line()?;
+            Terminal::print("~")?;
+
+            if current_row + 1 < height {
+                Terminal::print("\r\n")?;
+            }
         }
         Ok(())
     }
-    fn draw_rows() -> Result<(), std::io::Error> {
-        let height = Terminal::size();
-        for current_row in 0..height.height {
-            queue!(stdout(), Print("~"))?;
-            if current_row + 1 < height.height {
-                queue!(stdout(), Print("\r\n"))?;
-            }
-        }
+    fn print_name() -> Result<(), Error> {
+        let size = Terminal::size()?;
+
+        Terminal::move_cursor_to(Position {
+            x: size.width / 2,
+            y: size.height / 2,
+        })?;
+
+        Terminal::print("Hecto")?;
+        Terminal::move_cursor_to(Position {
+            x: size.width / 2 - 3,
+            y: size.height / 2 + 1,
+        })?;
+        Terminal::print("Version 0.0.1")?;
+
         Ok(())
     }
 }
