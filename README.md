@@ -1,3 +1,3 @@
-Tutorial made by Philipp lenker.
+Tutorial made by Philipp Flenker.
 
 https://www.flenker.blog/hecto/
